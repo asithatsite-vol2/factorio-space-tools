@@ -31,10 +31,9 @@ def produce_graph():
     Generate a traditional digraph from the list of links
     """
     graph = {place: {} for place in PLACES}
-    for left, right in LINKS.values():
-        # TODO: Weights
-        graph[left][right] = 1
-        graph[right][left] = 1
+    for left, right, deltav in LINKS.values():
+        graph[left][right] = deltav
+        graph[right][left] = deltav
     return graph
 
 
@@ -82,11 +81,11 @@ def magic_route_finder(starting: int, ending: int) -> Iterable[Tuple[int, int]]:
     link_index = {
         **{
             (left, right): route
-            for route, (left, right) in LINKS.items()
+            for route, (left, right, _) in LINKS.items()
         },
         **{
             (right, left): route
-            for route, (left, right) in LINKS.items()
+            for route, (left, right, _) in LINKS.items()
         },
     }
     route = list(_dijkstra_route(starting, ending))
