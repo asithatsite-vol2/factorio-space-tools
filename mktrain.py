@@ -216,6 +216,10 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     route_there = list(magic_route_finder(startplace, endplace))
     route_back = list(magic_route_finder(endplace, startplace))  # FIXME: Just reverse route_there
 
+    print("Route:", " -> ".join([
+        PLACES[startplace], *[PLACES[p] for _, p in route_there]
+    ]))
+
     yield from schedule_start(startname)
     yield from schedule_route_hops(route_there)
     yield from schedule_end(endname)
@@ -299,6 +303,7 @@ def main():
 from {PLACES[starting_place]} to {PLACES[ending_place]}
 """
     bp = build_blueprint(kind, "TRAIN!", description, schedule)
+    print("")
     print(blueprints.dumps(bp))
 
 
