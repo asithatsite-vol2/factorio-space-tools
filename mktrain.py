@@ -3,10 +3,10 @@
 Wizard to make a train blueprint for a given Multi-Hop route.
 """
 import heapq
-from typing import Iterable, Tuple
+import os.path
+from typing import Iterable, Sequence, Tuple
 
 import blueprints
-
 
 PLACES = {
     # Automation ID: Human name
@@ -44,9 +44,9 @@ def dijkstra(graph, node):
     # node is the starting place
     distances = {node: float('inf') for node in graph}
     distances[node] = 0
-    came_from = {node: None for node in graph}    
+    came_from = {node: None for node in graph}
     queue = [(0, node)]
-    
+
     while queue:
         current_distance, current_node = heapq.heappop(queue)
         # relaxation
@@ -99,6 +99,7 @@ def prompt_for_place(prompt: str) -> int:
     """
     Ask the user to pick a place, returns the place ID
     """
+    print('')
     for num, name in PLACES.items():
         print(f"{num}: {name}")
     while True:
@@ -120,7 +121,7 @@ def prompt_for_station(prompt: str) -> str:
     """
     Asks the user for a station name, returns it.
     """
-    return input(prompt)
+    return input('\n'+prompt)
 
 
 def prompt_for_kind(prompt: str) -> str:
@@ -128,11 +129,47 @@ def prompt_for_kind(prompt: str) -> str:
     Ask the user if they want solids or liquids, returns either 'cargo' or 'fluid'.
     """
     while True:
-        kind = input(prompt)
+        kind = input('\n'+prompt)
         if kind in ('cargo', 'fluid'):
             return kind
         else:
             print("Must be 'cargo' or 'fluid'")
+
+
+def prompt_for_cargo(prompt: str) -> str:
+    """
+    Ask the user what cargo the train carries, returns an item name and a normalized name.
+    """
+    cargo = input('\n'+prompt)
+    cargo = cargo.lower().replace(' ', '-')
+    pretty_cargo = cargo.replace('-', ' ').title()
+    return pretty_cargo, cargo
+
+
+def icon_list_to_objects(icon_list: Sequence) -> list:
+    """
+    Generate a list of blueprint icon objects (https://wiki.factorio.com/Blueprint_string_format#Icon_object)
+
+    Args:
+        icon_list (Sequence): Icons to make into objects
+
+    Returns:
+        list: list of objects
+    """
+    if isinstance(icon_list, str):
+        icon_list = (icon_list,)
+    icon_objects = []
+    for icon_index, icon in enumerate(icon_list):
+        icon_objects.append(
+            {
+                'index': icon_index + 1,
+                'signal': {
+                    'name': icon,
+                    'type': 'item'
+                }
+            }
+        )
+    return icon_objects
 
 
 def schedule_start(name: str):
@@ -214,7 +251,8 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     for it.
     """
     route_there = list(magic_route_finder(startplace, endplace))
-    route_back = list(magic_route_finder(endplace, startplace))  # FIXME: Just reverse route_there
+    # FIXME: Just reverse route_there
+    route_back = list(magic_route_finder(endplace, startplace))
 
     print("Route:", " -> ".join([
         PLACES[startplace], *[PLACES[p] for _, p in route_there]
@@ -226,11 +264,15 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     yield from schedule_route_hops(route_back)
 
 
-def build_blueprint(kind, label, description, schedule):
+def build_blueprint(kind, label, description, schedule, cargo=None):
     """
     Build the actual blueprint schema
     """
     assert kind in ('cargo', 'fluid')
+    wagon = f'{kind}-wagon'
+    if cargo is None:
+        cargo = ['locomotive', wagon]
+    cargo_icons = icon_list_to_objects(cargo)
     return {
         'blueprint': {
             'description': description,
@@ -244,28 +286,28 @@ def build_blueprint(kind, label, description, schedule):
                 {
                     'entity_number': 2,
                     'inventory': None,
-                    'name': f'{kind}-wagon',
+                    'name': wagon,
                     'orientation': 0.5,
                     'position': {'x': -93, 'y': 187},
                 },
                 {
                     'entity_number': 3,
                     'inventory': None,
-                    'name': f'{kind}-wagon',
+                    'name': wagon,
                     'orientation': 0.5,
                     'position': {'x': -93, 'y': 194},
                 },
                 {
                     'entity_number': 4,
                     'inventory': None,
-                    'name': f'{kind}-wagon',
+                    'name': wagon,
                     'orientation': 0.5,
                     'position': {'x': -93, 'y': 201},
                 },
                 {
                     'entity_number': 5,
                     'inventory': None,
-                    'name': f'{kind}-wagon',
+                    'name': wagon,
                     'orientation': 0.5,
                     'position': {'x': -93, 'y': 208},
                 },
@@ -276,7 +318,7 @@ def build_blueprint(kind, label, description, schedule):
                     'position': {'x': -93, 'y': 215},
                 },
             ],
-            'icons': [],
+            'icons': cargo_icons,
             'item': 'blueprint',
             'label': label,
             'schedules': [
@@ -292,19 +334,23 @@ def build_blueprint(kind, label, description, schedule):
 
 def main():
     kind = prompt_for_kind('Kind of train: ')
+    pretty_cargo, cargo = prompt_for_cargo('What are we carrying? ')
     starting_station = prompt_for_station('Pickup Station: ')
     starting_place = prompt_for_place('Pickup Place: ')
     ending_station = prompt_for_station('Dropoff Station: ')
     ending_place = prompt_for_place('Dropoff Place: ')
 
-    schedule = find_schedule(starting_station, starting_place, ending_station, ending_place)
+    print(f'\nMoving {pretty_cargo} ({cargo})')
 
-    description = f"""(stuff)
-from {PLACES[starting_place]} to {PLACES[ending_place]}
-"""
-    bp = build_blueprint(kind, "TRAIN!", description, schedule)
+    schedule = find_schedule(
+        starting_station, starting_place, ending_station, ending_place)
+
+    description = f"""{pretty_cargo} from {PLACES[starting_place]} to {PLACES[ending_place]}"""
+    bp = build_blueprint(
+        kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo)
     print("")
     print(blueprints.dumps(bp))
+    blueprints.dump(bp, os.path.join('json', f'{cargo}.json'))
 
 
 if __name__ == '__main__':
