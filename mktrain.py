@@ -117,11 +117,15 @@ def prompt_for_place(prompt: str) -> int:
                 return num
 
 
-def prompt_for_station(prompt: str) -> str:
+def prompt_for_station(prompt: str, default: str = '') -> str:
     """
     Asks the user for a station name, returns it.
     """
-    return input('\n'+prompt)
+    station = input(f'\n{prompt}[{default}] ')
+    if len(station) > 0:
+        return station
+    else:
+        return default
 
 
 def prompt_for_kind(prompt: str) -> str:
@@ -377,9 +381,9 @@ def build_blueprint(kind, label, description, schedule, cargo=None):
 def main():
     kind = prompt_for_kind('Kind of train: ')
     pretty_cargo, cargo = prompt_for_cargo('What are we carrying? ')
-    starting_station = prompt_for_station('Pickup Station: ')
+    starting_station = prompt_for_station('Pickup Station: ',f'{pretty_cargo} Pickup')
     starting_place = prompt_for_place('Pickup Place: ')
-    ending_station = prompt_for_station('Dropoff Station: ')
+    ending_station = prompt_for_station('Dropoff Station: ',f'{pretty_cargo} Drop')
     ending_place = prompt_for_place('Dropoff Place: ')
 
     print(f'\nMoving {pretty_cargo} ({cargo})')
