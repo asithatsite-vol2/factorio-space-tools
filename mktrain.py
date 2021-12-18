@@ -172,6 +172,48 @@ def icon_list_to_objects(icon_list: Sequence) -> list:
     return icon_objects
 
 
+def get_route_list(schedule: Sequence) -> list:
+    """
+    Generate a list of pretty route numbers
+
+    Args:
+        schedule (Sequence): schedule
+
+    Returns:
+        list: list of routes taken
+    """
+    routes = []
+    for station in schedule:
+        name = station['station']
+        if 'Boarding' in name:
+            continue
+        if 'Rt' in name:
+            route = f'Route {name[2:]}'
+            if route not in routes:
+                routes.append(route)
+    return routes
+
+
+def make_grammar_list(items: Sequence[str]) -> str:
+    """
+    Make a grammatically-correct string from a list of strings
+
+    Args:
+        items (Sequence[str]): list of strings
+
+    Returns:
+        str: grammatically-correct string of strings in list
+    """
+    if len(items) == 0:
+        return ''
+    elif len(items) == 1:
+        return items[0]
+    elif len(items) == 2:
+        return ' and '.join(items)
+    else:
+        return ', '.join(items[:-1]) + ', and ' + items[-1]
+
+
 def schedule_start(name: str):
     """
     Produce the train stops for pickup
@@ -342,10 +384,11 @@ def main():
 
     print(f'\nMoving {pretty_cargo} ({cargo})')
 
-    schedule = find_schedule(
-        starting_station, starting_place, ending_station, ending_place)
+    schedule = list(find_schedule(
+        starting_station, starting_place, ending_station, ending_place))
+    routes = make_grammar_list(get_route_list(schedule))
 
-    description = f"""{pretty_cargo} from {PLACES[starting_place]} to {PLACES[ending_place]}"""
+    description = f"""{pretty_cargo} from {PLACES[starting_place]} to {PLACES[ending_place]} via {routes}"""
     bp = build_blueprint(
         kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo)
     print("")
