@@ -5,6 +5,8 @@ Wizard to make a train blueprint for a given Multi-Hop route.
 import heapq
 import os.path
 import struct
+import sys
+from csv import DictReader
 from typing import Iterable, Sequence, Tuple
 
 import pyperclip
@@ -155,17 +157,30 @@ def prompt_for_kind(prompt: str) -> str:
             print("Must be 'cargo' or 'fluid'")
 
 
-def prompt_for_cargo(prompt: str) -> str:
+def prompt_for_cargo(prompt: str) -> tuple[list, list]:
     """
-    Ask the user what cargo the train carries, returns an item name and a normalized name.
+    Ask the user what cargo the train carries, returns item names
     """
-    cargo = input('\n'+prompt)
-    cargo = cargo.lower().replace(' ', '-')
-    pretty_cargo = cargo.replace('-', ' ').title()
-    return pretty_cargo, cargo
+    input_cargo = input('\n'+prompt).split(',')
+    cargo = []
+    for item in input_cargo:
+        item = item.strip().lower().replace(' ', '-')
+        cargo.append(item)
+    return cargo
 
 
-def icon_list_to_objects(icon_list: Sequence) -> list:
+def make_pretty_cargo(cargo):
+    pretty_cargo = []
+    DROP_PREFIXES = ('aai-', 'se-')
+    for item in cargo:
+        for prefix in DROP_PREFIXES:
+            item = item.replace(prefix, '')
+        pretty_item = item.replace('-', ' ').title()
+        pretty_cargo.append(pretty_item)
+    return pretty_cargo
+
+
+def icon_list_to_objects(icon_list: Sequence, kind: str) -> list:
     """
     Generate a list of blueprint icon objects (https://wiki.factorio.com/Blueprint_string_format#Icon_object)
 
@@ -175,6 +190,10 @@ def icon_list_to_objects(icon_list: Sequence) -> list:
     Returns:
         list: list of objects
     """
+    if kind == 'cargo':
+        kind = 'item'
+    elif kind != 'fluid':
+        kind = 'virtual'
     if isinstance(icon_list, str):
         icon_list = (icon_list,)
     icon_objects = []
@@ -184,7 +203,7 @@ def icon_list_to_objects(icon_list: Sequence) -> list:
                 'index': icon_index + 1,
                 'signal': {
                     'name': icon,
-                    'type': 'item'
+                    'type': kind
                 }
             }
         )
@@ -231,6 +250,36 @@ def make_grammar_list(items: Sequence[str]) -> str:
         return ' and '.join(items)
     else:
         return ', '.join(items[:-1]) + ', and ' + items[-1]
+
+
+def make_bullet_list(items: Sequence[str]) -> str:
+    if len(items) == 0:
+        return ''
+    else:
+        return '* ' + '\n* '.join(items)
+
+
+def make_description(cargo: Sequence[str], source: str, destination: str, schedule: Sequence) -> str:
+    routes = make_grammar_list(get_route_list(schedule))
+    if len(cargo) > 3:
+        return f'From {source} to {destination} via {routes}:\n{make_bullet_list(cargo)}'
+    else:
+        return f"""{make_grammar_list(cargo)} from {source} to {destination} via {routes}"""
+
+
+def make_label(cargo: Sequence[str], destination: str) -> str:
+    if len(cargo) > 3:
+        WORDS = {}
+        for item in cargo:
+            for word in item.split(' '):
+                if word not in WORDS.keys():
+                    WORDS[word] = 1
+                else:
+                    WORDS[word] += 1
+        best_word = max(WORDS, key=WORDS.get)
+        return f'{best_word} misc. to {destination}'
+    else:
+        return f"{make_grammar_list(cargo)} to {destination}"
 
 
 def schedule_start(name: str):
@@ -325,7 +374,7 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     yield from schedule_route_hops(route_back)
 
 
-def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
+def build_blueprint(kind, schedule, source, destination, cargo=None, pretty_cargo=None, color=None):
     """
     Build the actual blueprint schema
     """
@@ -333,11 +382,16 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
     wagon = f'{kind}-wagon'
     if cargo is None:
         cargo = ['locomotive', wagon]
-    cargo_icons = icon_list_to_objects(cargo)
+    if pretty_cargo is None:
+        pretty_cargo = make_pretty_cargo(cargo)
+    cargo_icons = icon_list_to_objects(cargo, kind)[:4]
     if color is None:
         r, g, b = (1, 1, 1)
     else:
         r, g, b = colors.colorhash_to_srgb(color).get_value_tuple()
+
+    label = make_label(pretty_cargo, destination)
+    description = make_description(pretty_cargo, source, destination, schedule)
     return {
         'blueprint': {
             'description': description,
@@ -399,35 +453,105 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
     }
 
 
-def main():
-    kind = prompt_for_kind('Kind of train: ')
-    pretty_cargo, cargo = prompt_for_cargo('What are we carrying? ')
-    starting_station = prompt_for_station(
-        'Pickup Station: ', f'{pretty_cargo} Pickup')
-    starting_place = prompt_for_place('Pickup Place: ')
-    ending_station = prompt_for_station(
-        'Dropoff Station: ', f'{pretty_cargo} Drop')
-    ending_place = prompt_for_place('Dropoff Place: ')
+def main(kind=None, cargo=None,
+         starting_station=None, starting_place=None,
+         ending_station=None, ending_place=None,
+         copy=True):
+    if kind is None:
+        kind = prompt_for_kind('Kind of train: ')
+    if cargo is None:
+        cargo = prompt_for_cargo('What are we carrying? ')
+    pretty_cargo = make_pretty_cargo(cargo)
+    if starting_station is None:
+        starting_station = prompt_for_station(
+            'Pickup Station: ', f'{pretty_cargo} Pickup')
+    if starting_place is None:
+        starting_place = prompt_for_place('Pickup Place: ')
+    if ending_station is None:
+        ending_station = prompt_for_station(
+            'Dropoff Station: ', f'{pretty_cargo} Drop')
+    if ending_place is None:
+        ending_place = prompt_for_place('Dropoff Place: ')
 
     print(f'\nMoving {pretty_cargo} ({cargo})')
 
     schedule = list(find_schedule(
         starting_station, starting_place, ending_station, ending_place))
-    routes = make_grammar_list(get_route_list(schedule))
 
-    description = f"""{pretty_cargo} from {PLACES[starting_place]} to {PLACES[ending_place]} via {routes}"""
-    bp = build_blueprint(
-        kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo, COLORS[PLACES[ending_place]])
+    bp = build_blueprint(kind, schedule, PLACES[starting_place],
+                         PLACES[ending_place], cargo, pretty_cargo, COLORS[PLACES[ending_place]])
     print("")
-    bp_string = blueprints.dumps(bp)
-    print(bp_string)
 
-    pyperclip.copy(bp_string)
-    print("")
-    print("Copied to clipboard")
+    if copy:
+        bp_string = blueprints.dumps(bp)
+        print(bp_string)
 
-    blueprints.dump(bp, os.path.join('json', f'{cargo}.json'))
+        pyperclip.copy(bp_string)
+        print("")
+        print("Copied to clipboard")
+
+    blueprints.dump(bp, os.path.join(
+        'json', PLACES[ending_place], f'{ending_station}.json'))
+    return bp
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        csvfile = sys.argv[1]
+        with open(csvfile) as f:
+            surfaces = {}
+            mhl_book = {
+                'blueprint_book':
+                {
+                    'item': 'blueprint-book',
+                    'label': 'Multi-Hop Logistics Trains',
+                    'description': 'Multi-Hop Trains generated by https://github.com/AstraLuma/factorio-space-tools mktrain.py',
+                    'active_index': 0,
+                    'version': FACTORIO_VERSION,
+                    'blueprints': []
+                }
+            }
+            for row in DictReader(f):
+                if row['Manual?'] == "Yes":
+                    continue
+                if row['End Place'] not in surfaces.keys():
+                    index = len(mhl_book['blueprint_book']['blueprints'])
+                    surfaces[row['End Place']] = index
+                    mhl_book['blueprint_book']['blueprints'].append(
+                        {
+                            'index': index,
+                            'blueprint_book':
+                            {
+                                'item': 'blueprint-book',
+                                'label': f'To {row["End Place"]}',
+                                'description': f'Trains destined for {row["End Place"]}',
+                                'active_index': 0,
+                                'version': FACTORIO_VERSION,
+                                'blueprints': []
+                            }
+                        }
+                    )
+                book = mhl_book['blueprint_book']['blueprints'][surfaces[row['End Place']]
+                                                                ]['blueprint_book']
+
+                train = main(
+                    kind=row['Kind'],
+                    cargo=[c.strip().lower().replace(' ', '-')
+                           for c in row['Cargo'].split(',')],
+                    starting_station=row['Start Station'],
+                    starting_place=int(row['Start ID']),
+                    ending_station=row['End Station'],
+                    ending_place=int(row['End ID'])
+                )
+                train['index'] = len(book['blueprints'])
+                book['blueprints'].append(train)
+            bp_string = blueprints.dumps(mhl_book)
+            print(bp_string)
+
+            pyperclip.copy(bp_string)
+
+            print("")
+            print("Copied to clipboard")
+            blueprints.dump(mhl_book, os.path.join('json', 'mhl_book.json'))
+    else:
+        main()
