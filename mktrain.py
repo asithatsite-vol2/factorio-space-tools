@@ -325,9 +325,9 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
         cargo = ['locomotive', wagon]
     cargo_icons = icon_list_to_objects(cargo)
     if color is None:
-        r, g, b = (234, 17, 0)
+        r, g, b = (1, 1, 1)
     else:
-        r, g, b = color.rgb
+        r, g, b = colors.colorhash_to_srgb(color).get_value_tuple()
     return {
         'blueprint': {
             'description': description,
@@ -337,7 +337,7 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
                     'name': 'locomotive',
                     'orientation': 0.75,
                     'position': {'x': -381.99609375, 'y': -81},
-                    'color': {'r': r, 'g': g, 'b': b, 'a': 1},
+                    'color': {'r': r, 'g': g, 'b': b, 'a': 0.49803921580314636},
                 },
                 {
                     'entity_number': 2,
@@ -372,7 +372,7 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
                     'name': 'locomotive',
                     'orientation': 0.25,
                     'position': {'x': -346.99609375, 'y': -81},
-                    'color': {'r': r, 'g': g, 'b': b, 'a': 1},
+                    'color': {'r': r, 'g': g, 'b': b, 'a': 0.49803921580314636},
                 },
             ],
             'icons': cargo_icons,
