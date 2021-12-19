@@ -6,7 +6,10 @@ import heapq
 import os.path
 from typing import Iterable, Sequence, Tuple
 
+from colorhash import ColorHash
+
 import blueprints
+import colors
 
 PLACES = {
     # Automation ID: Human name
@@ -24,6 +27,8 @@ LINKS = {
     102: (200, 148, 8620),
     999: (1151, 1, 10464),
 }
+
+COLORS = {place: ColorHash(f'{id}: {place}') for id, place in PLACES.items()}
 
 
 def produce_graph():
@@ -310,7 +315,7 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     yield from schedule_route_hops(route_back)
 
 
-def build_blueprint(kind, label, description, schedule, cargo=None):
+def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
     """
     Build the actual blueprint schema
     """
@@ -319,6 +324,10 @@ def build_blueprint(kind, label, description, schedule, cargo=None):
     if cargo is None:
         cargo = ['locomotive', wagon]
     cargo_icons = icon_list_to_objects(cargo)
+    if color is None:
+        r, g, b = (234, 17, 0)
+    else:
+        r, g, b = color.rgb
     return {
         'blueprint': {
             'description': description,
@@ -326,42 +335,44 @@ def build_blueprint(kind, label, description, schedule, cargo=None):
                 {
                     'entity_number': 1,
                     'name': 'locomotive',
-                    'orientation': 0,
-                    'position': {'x': -93, 'y': 180},
+                    'orientation': 0.75,
+                    'position': {'x': -381.99609375, 'y': -81},
+                    'color': {'r': r, 'g': g, 'b': b, 'a': 1},
                 },
                 {
                     'entity_number': 2,
                     'inventory': None,
                     'name': wagon,
-                    'orientation': 0.5,
-                    'position': {'x': -93, 'y': 187},
+                    'orientation': 0.25,
+                    'position': {'x': -374.99609375, 'y': -81},
                 },
                 {
                     'entity_number': 3,
                     'inventory': None,
                     'name': wagon,
-                    'orientation': 0.5,
-                    'position': {'x': -93, 'y': 194},
+                    'orientation': 0.25,
+                    'position': {'x': -367.99609375, 'y': -81},
                 },
                 {
                     'entity_number': 4,
                     'inventory': None,
                     'name': wagon,
-                    'orientation': 0.5,
-                    'position': {'x': -93, 'y': 201},
+                    'orientation': 0.25,
+                    'position': {'x': -360.99609375, 'y': -81},
                 },
                 {
                     'entity_number': 5,
                     'inventory': None,
                     'name': wagon,
-                    'orientation': 0.5,
-                    'position': {'x': -93, 'y': 208},
+                    'orientation': 0.25,
+                    'position': {'x': -353.99609375, 'y': -81},
                 },
                 {
                     'entity_number': 6,
                     'name': 'locomotive',
-                    'orientation': 0.5,
-                    'position': {'x': -93, 'y': 215},
+                    'orientation': 0.25,
+                    'position': {'x': -346.99609375, 'y': -81},
+                    'color': {'r': r, 'g': g, 'b': b, 'a': 1},
                 },
             ],
             'icons': cargo_icons,
@@ -381,9 +392,11 @@ def build_blueprint(kind, label, description, schedule, cargo=None):
 def main():
     kind = prompt_for_kind('Kind of train: ')
     pretty_cargo, cargo = prompt_for_cargo('What are we carrying? ')
-    starting_station = prompt_for_station('Pickup Station: ',f'{pretty_cargo} Pickup')
+    starting_station = prompt_for_station(
+        'Pickup Station: ', f'{pretty_cargo} Pickup')
     starting_place = prompt_for_place('Pickup Place: ')
-    ending_station = prompt_for_station('Dropoff Station: ',f'{pretty_cargo} Drop')
+    ending_station = prompt_for_station(
+        'Dropoff Station: ', f'{pretty_cargo} Drop')
     ending_place = prompt_for_place('Dropoff Place: ')
 
     print(f'\nMoving {pretty_cargo} ({cargo})')
@@ -394,7 +407,7 @@ def main():
 
     description = f"""{pretty_cargo} from {PLACES[starting_place]} to {PLACES[ending_place]} via {routes}"""
     bp = build_blueprint(
-        kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo)
+        kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo, COLORS[PLACES[ending_place]])
     print("")
     print(blueprints.dumps(bp))
     blueprints.dump(bp, os.path.join('json', f'{cargo}.json'))
