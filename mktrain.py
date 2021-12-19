@@ -4,13 +4,21 @@ Wizard to make a train blueprint for a given Multi-Hop route.
 """
 import heapq
 import os.path
+import struct
 from typing import Iterable, Sequence, Tuple
 
-from colorhash import ColorHash
 import pyperclip
+from colorhash import ColorHash
 
 import blueprints
 import colors
+
+FACTORIO_VERSION = int.from_bytes(
+    struct.pack('<HHHH',
+                1, 1, 49, 0
+                ),
+    byteorder='little',
+    signed=False)
 
 
 PLACES = {
@@ -386,7 +394,7 @@ def build_blueprint(kind, label, description, schedule, cargo=None, color=None):
                     'schedule': [*schedule],
                 },
             ],
-            'version': 281479274823680,
+            'version': FACTORIO_VERSION,
         }
     }
 
