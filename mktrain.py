@@ -7,9 +7,11 @@ import os.path
 from typing import Iterable, Sequence, Tuple
 
 from colorhash import ColorHash
+import pyperclip
 
 import blueprints
 import colors
+
 
 PLACES = {
     # Automation ID: Human name
@@ -409,7 +411,13 @@ def main():
     bp = build_blueprint(
         kind, f"{pretty_cargo} to {PLACES[ending_place]}", description, schedule, cargo, COLORS[PLACES[ending_place]])
     print("")
-    print(blueprints.dumps(bp))
+    bp_string = blueprints.dumps(bp)
+    print(bp_string)
+
+    pyperclip.copy(bp_string)
+    print("")
+    print("Copied to clipboard")
+
     blueprints.dump(bp, os.path.join('json', f'{cargo}.json'))
 
 
