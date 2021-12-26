@@ -464,12 +464,12 @@ def main(kind=None, cargo=None,
     pretty_cargo = make_pretty_cargo(cargo)
     if starting_station is None:
         starting_station = prompt_for_station(
-            'Pickup Station: ', f'{pretty_cargo} Pickup')
+            'Pickup Station: ', f'{pretty_cargo[0]} Pickup')
     if starting_place is None:
         starting_place = prompt_for_place('Pickup Place: ')
     if ending_station is None:
         ending_station = prompt_for_station(
-            'Dropoff Station: ', f'{pretty_cargo} Drop')
+            'Dropoff Station: ', f'{pretty_cargo[0]} Drop')
     if ending_place is None:
         ending_place = prompt_for_place('Dropoff Place: ')
 
