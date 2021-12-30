@@ -31,6 +31,7 @@ PLACES = {
     200: 'Astermore Outer Belt',
     1: 'Foenestra',
     1139: 'Mara',
+    1112: 'Darkflare',
 }
 
 LINKS = {
@@ -40,6 +41,7 @@ LINKS = {
     102: (200, 148, 8620),
     999: (1151, 1, 10464),
     115: (1139, 1151, 6390),
+    998: (1, 1112, 10000),
 }
 
 COLORS = {place: ColorHash(f'{id}: {place}') for id, place in PLACES.items()}
