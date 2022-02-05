@@ -1,0 +1,38 @@
+x_tl, x_tr, x_bl
+y_tl, y_tr, y_bl
+z_tl, z_tr, z_bl
+
+create transform that maps x-y plane to above
+
+Top Left: <0,0,0> -> <x_tl, y_tl, z_tl>
+Top Right: <1,0,0> -> <x_tr, y_tr, z_tr>
+Bottom Left: <0,1,0> -> <x_bl, y_bl, z_bl>
+
+[x]   [_, _, _]
+[y] x [_, _, _] = [x', y', z']
+[z]   [_, _, _]
+
+
+Grid basis vectors:
+* Columns: V_tr - V_tl
+* Rows: V_bl - V_tl
+
+> So. . . (bl - tl) / 4 * {1 <= x <= 2} + (tr - tl) / 4 * {1 <= y <= 2} should get you a point inside the red square.
+
+B_row / size * row + B_col / size * col
+
+
+size = 3
+row = 1.5
+col = 1.5
+V_tl = <1,0,0>
+V_tr = <1,1,0>
+V_bl = <1,0,1>
+
+B_col = <0,1,0>
+B_row = <0,0,1>
+
+<0,0,1> / 3 * 1.5 + <0,1,0> / 3 * 1.5
+<0,0,.3> * 1.5 + <0,.3,0> * 1.5
+<0,0,.5> + <0,.5,0>
+<0,.5,.5>
