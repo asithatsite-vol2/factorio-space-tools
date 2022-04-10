@@ -7,7 +7,7 @@ import os.path
 import struct
 import sys
 from csv import DictReader
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, List, Sequence, Tuple
 
 import pyperclip
 from colorhash import ColorHash
@@ -44,7 +44,7 @@ LINKS = {
     115: (1139, 1151, 6390),
     998: (1, 1112, 10000),
     120: (588, 564, 7711),
-    #119: (564, 1151, 8817),
+    # 119: (564, 1151, 8817),
 }
 
 COLORS = {place: ColorHash(f'{id}: {place}') for id, place in PLACES.items()}
@@ -176,7 +176,16 @@ def prompt_for_cargo(prompt: str) -> tuple[list, list]:
     return cargo
 
 
-def make_pretty_cargo(cargo):
+def make_pretty_cargo(cargo: Sequence[str]) -> List[str]:
+    """
+    Make a list of human-readable cargo names based on item strings
+
+    Args:
+        cargo (Sequence[str]): strings of cargo as Factorio item names
+
+    Returns:
+        List[str]: same strings in titlecase, without prefixes, and with spaces instead of dashes
+    """
     pretty_cargo = []
     DROP_PREFIXES = ('aai-', 'se-')
     for item in cargo:
