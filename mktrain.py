@@ -7,7 +7,7 @@ import os.path
 import struct
 import sys
 from csv import DictReader
-from typing import Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 import pyperclip
 from colorhash import ColorHash
@@ -322,16 +322,22 @@ def schedule_end(name: str):
     }
 
 
-def schedule_lobby():
+def schedule_lobby(delay: int = 60) -> Dict[str, Any]:
     """
     Produce the train stops for a lobby.
+
+    Args:
+        delay (int, optional): waiting time at lobby in ticks.. Defaults to 60(1s).
+
+    Yields:
+        Dict[str,Any]: station JSON object
     """
     yield {
         'station': '-Lobby',
         'wait_conditions': [
             {
                 'compare_type': 'or',
-                'ticks': 60,
+                'ticks': delay,
                 'type': 'time',
             },
         ],
@@ -342,6 +348,7 @@ def schedule_ship(route: int, dest: int):
     """
     Produce the train stops for a ship traversal.
     """
+
     yield {'station': f'Boarding Rt{route}'}
     yield {
         'station': f'Rt{route}',
@@ -357,6 +364,24 @@ def schedule_ship(route: int, dest: int):
             },
         ],
     }
+
+def schedule_elevator(surface: str) -> Dict[str,str]:
+    """
+    Produce the train stops for an elevator traversal
+
+    Args:
+        surface (str): surface with the elevator
+
+    Returns:
+        Dict[str,str]: JSON station objects
+
+    Yields:
+        Iterator[Dict[str,str]]: first the descend station and lobby, then the ascend station and lobby
+    """
+    yield {'station': f'[img=entity/se-space-elevator]  {surface} ↓'}
+    yield schedule_lobby(delay=0)
+    yield {'station': f'[img=entity/se-space-elevator]  {surface} ↑'}
+    yield schedule_lobby(delay=0)
 
 
 def schedule_route_hops(hops: Iterable[Tuple[int, int]]):
