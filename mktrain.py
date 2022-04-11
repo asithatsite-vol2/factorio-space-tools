@@ -33,6 +33,7 @@ PLACES = {
     1139: 'Mara',
     1112: 'Darkflare',
     564: 'Calidus Orbit',
+    1147: 'Njord',
 }
 
 LINKS = {
@@ -44,7 +45,8 @@ LINKS = {
     115: (1139, 1151, 6390),
     998: (1, 1112, 10000),
     120: (588, 564, 7711),
-    # 119: (564, 1151, 8817),
+    119: (564, 1151, 8817),
+    118: (588, 1147, 850),
 }
 
 COLORS = {place: ColorHash(f'{id}: {place}') for id, place in PLACES.items()}
