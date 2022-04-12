@@ -25,6 +25,7 @@ FACTORIO_VERSION = int.from_bytes(
 
 PLACES = {
     # Automation ID: Human name
+    587: 'Auberge',
     588: 'Auberge Orbit',
     1151: 'Calidus Outer Belt',
     148: 'Astermore Orbit',
@@ -36,7 +37,8 @@ PLACES = {
     1147: 'Njord',
 }
 
-LINKS = {
+
+MHL_LINKS = {
     # Clamp/Route Num: (Place ID, Place ID, delta v),
     111: (588, 1151, 2606),
     100: (1151, 200, 10918),
@@ -49,6 +51,12 @@ LINKS = {
     118: (588, 1147, 850),
 }
 
+ELEVATORS = [
+    # (name, bottom ID, top ID)
+    ('Auberge', 587, 588),
+]
+
+
 COLORS = {place: ColorHash(f'{id}: {place}') for id, place in PLACES.items()}
 
 
@@ -57,9 +65,12 @@ def produce_graph():
     Generate a traditional digraph from the list of links
     """
     graph = {place: {} for place in PLACES}
-    for left, right, deltav in LINKS.values():
+    for left, right, deltav in MHL_LINKS.values():
         graph[left][right] = deltav
         graph[right][left] = deltav
+    for _, bottom, top in ELEVATORS:
+        graph[bottom][top] = 50
+        graph[top][bottom] = 50
     return graph
 
 
@@ -107,11 +118,19 @@ def magic_route_finder(starting: int, ending: int) -> Iterable[Tuple[int, int]]:
     link_index = {
         **{
             (left, right): route
-            for route, (left, right, _) in LINKS.items()
+            for route, (left, right, _) in MHL_LINKS.items()
         },
         **{
             (right, left): route
-            for route, (left, right, _) in LINKS.items()
+            for route, (left, right, _) in MHL_LINKS.items()
+        },
+        **{
+            (top, bottom): 'elevator'
+            for _, bottom, top in ELEVATORS
+        },
+        **{
+            (bottom, top): 'elevator'
+            for _, bottom, top in ELEVATORS
         },
     }
     route = list(_dijkstra_route(starting, ending))
@@ -243,7 +262,10 @@ def get_route_list(schedule: Sequence) -> list:
         name = station['station']
         if 'Boarding' in name:
             continue
-        if 'Rt' in name:
+        elif 'se-space-elevator' in name:
+            if 'Elevator' not in routes:
+                routes.append('Elevator')
+        elif 'Rt' in name:
             route = f'Route {name[2:]}'
             if route not in routes:
                 routes.append(route)
@@ -342,7 +364,7 @@ def schedule_lobby(delay: int = 60) -> Dict[str, Any]:
                 'ticks': delay,
                 'type': 'time',
             },
-        ],
+        ] if delay else [],
     }
 
 
@@ -367,23 +389,52 @@ def schedule_ship(route: int, dest: int):
         ],
     }
 
-def schedule_elevator(surface: str) -> Dict[str,str]:
+
+def schedule_elevator_ascent(name: str) -> Iterable[Dict[str, str]]:
     """
-    Produce the train stops for an elevator traversal
+    Produce the train stops for an elevator ascent
 
     Args:
-        surface (str): surface with the elevator
-
-    Returns:
-        Dict[str,str]: JSON station objects
+        name (str): surface with the elevator
 
     Yields:
-        Iterator[Dict[str,str]]: first the descend station and lobby, then the ascend station and lobby
+        Dict[str,str]: schedule stops
     """
-    yield {'station': f'[img=entity/se-space-elevator]  {surface} ↓'}
-    yield schedule_lobby(delay=0)
-    yield {'station': f'[img=entity/se-space-elevator]  {surface} ↑'}
-    yield schedule_lobby(delay=0)
+    yield {'station': f'[img=entity/se-space-elevator]  {name} ↑'}
+
+
+def schedule_elevator_descent(name: str) -> Iterable[Dict[str, str]]:
+    """
+    Produce the train stops for an elevator descent
+
+    Args:
+        name (str): surface with the elevator
+
+    Yields:
+        Dict[str,str]: schedule stops
+    """
+    yield {'station': f'[img=entity/se-space-elevator]  {name} ↓'}
+
+
+def schedule_elevator(dest) -> Iterable[Dict[str, str]]:
+    """
+    Produce the train stops for an elevator traversal.
+
+    Args:
+        dest (int): surface with the elevator
+
+    Yields:
+        Dict[str,str]: schedule stops
+    """
+    for name, bottom, top in ELEVATORS:
+        if bottom == dest:
+            yield from schedule_elevator_descent(name)
+            return
+        elif top == dest:
+            yield from schedule_elevator_ascent(name)
+            return
+    else:
+        assert False, f"Can't find the elevator for {dest} anymore???"
 
 
 def schedule_route_hops(hops: Iterable[Tuple[int, int]]):
@@ -392,10 +443,15 @@ def schedule_route_hops(hops: Iterable[Tuple[int, int]]):
 
     This includes all the bookend Lobby stations.
     """
-    yield from schedule_lobby()
-    for route, dest in hops:
-        yield from schedule_ship(route, dest)
-        yield from schedule_lobby()
+    for i, (route, dest) in enumerate(hops):
+        if i == 0 and route != 'elevator':
+            yield from schedule_lobby()
+        if route == 'elevator':
+            yield from schedule_elevator(dest)
+            yield from schedule_lobby(delay=0)
+        else:
+            yield from schedule_ship(route, dest)
+            yield from schedule_lobby()
 
 
 def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
@@ -404,11 +460,10 @@ def find_schedule(startname: str, startplace: int, endname: str, endplace: int):
     for it.
     """
     route_there = list(magic_route_finder(startplace, endplace))
-    # FIXME: Just reverse route_there
     route_back = list(magic_route_finder(endplace, startplace))
 
     print("Route:", " -> ".join([
-        PLACES[startplace], *[PLACES[p] for _, p in route_there]
+        PLACES[startplace], *[f"{PLACES[p]} ({rt})" for rt, p in route_there]
     ]))
 
     yield from schedule_start(startname)
