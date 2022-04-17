@@ -36,7 +36,9 @@ PLACES = {
     564: 'Calidus Orbit',
     1147: 'Njord',
     159: 'Ezra',
-    160: 'Ezra Orbit'
+    160: 'Ezra Orbit',
+    585: 'Magaera',
+    586: 'Magaera Orbit',
 }
 
 
@@ -51,13 +53,15 @@ MHL_LINKS = {
     120: (588, 564, 7711),
     119: (564, 1151, 8817),
     118: (588, 1147, 850),
-    101: (200, 160, 6977)
+    101: (200, 160, 6977),
+    112: (1151, 586, 3006),
 }
 
 ELEVATORS = [
     # (name, bottom ID, top ID)
     ('Auberge', 587, 588),
     ('Ezra', 159, 160),
+    ('Magaera', 585, 586),
 ]
 
 
