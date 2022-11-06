@@ -5,6 +5,7 @@ import base64
 import json
 import os
 import os.path
+from typing import Dict
 import zlib
 
 
@@ -47,3 +48,50 @@ def dump(data: dict, filename: str):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
+    
+def histogram(data: dict) -> Dict[str,int]:
+    """
+    Make a histogram of the items in a blueprint.
+
+    Args:
+        data (dict): blueprint structure
+
+    Returns:
+        Dict[str,int]: histogram of item:count
+    """
+    items = {}
+    if 'blueprint_book' in data:
+        items.update(_book_histogram(data['blueprint_book'],items))
+    elif 'blueprint' in data:
+        items.update(_blueprint_histogram(data['blueprint'],items))
+    
+    return items
+
+def _book_histogram(data: dict, items:Dict[str,int]=None) -> Dict[str,int]:
+    if items is None:
+        items = {}
+    
+    for blueprint in data['blueprints']:
+        if 'blueprint_book' in blueprint:
+            items.update(_book_histogram(blueprint['blueprint_book'],items))
+        elif 'blueprint' in blueprint:
+            items.update(_blueprint_histogram(blueprint['blueprint'],items))
+
+    return items
+
+def _blueprint_histogram(data: dict, items:Dict[str,int]=None) -> Dict[str,int]:
+    if items is None:
+        items = {}
+
+    if 'entities' in data:
+        for entity in data['entities']:
+            if entity['name'] not in items:
+                items[entity['name']] = 0
+            items[entity['name']] += 1
+    if 'tiles' in data:
+        for tile in data['tiles']:
+            if tile['name'] not in items:
+                items[tile['name']] = 0
+            items[tile['name']] += 1
+
+    return items
